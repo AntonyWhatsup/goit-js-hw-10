@@ -1,19 +1,16 @@
-import flatpickr from "flatpickr";
-import "flatpickr/dist/flatpickr.min.css";
-import iziToast from "izitoast";
-import "izitoast/dist/css/iziToast.min.css";
+import flatpickr from 'flatpickr';
+import 'flatpickr/dist/flatpickr.min.css';
+import iziToast from 'izitoast';
+import 'izitoast/dist/css/iziToast.min.css';
 
-const dateInput = document.querySelector("#datetime-picker");
-const startButton = document.querySelector("[data-start]");
-const timerFields = {
-  days: document.querySelector("[data-days]"),
-  hours: document.querySelector("[data-hours]"),
-  minutes: document.querySelector("[data-minutes]"),
-  seconds: document.querySelector("[data-seconds]")
-};
+const startButton = document.querySelector('[data-start]');
+const daysEl = document.querySelector('[data-days]');
+const hoursEl = document.querySelector('[data-hours]');
+const minutesEl = document.querySelector('[data-minutes]');
+const secondsEl = document.querySelector('[data-seconds]');
+const datetimePicker = document.getElementById('datetime-picker');
 
 let userSelectedDate = null;
-let countdownInterval = null;
 
 const options = {
   enableTime: true,
@@ -22,25 +19,57 @@ const options = {
   minuteIncrement: 1,
   onClose(selectedDates) {
     const selectedDate = selectedDates[0];
-    userSelectedDate = selectedDate;
-    
-    if (selectedDate < new Date()) {
+
+    if (selectedDate <= new Date()) {
       iziToast.error({
         title: 'Error',
-        message: 'Please choose a date in the future.',
+        message: 'Please choose a date in the future',
       });
       startButton.disabled = true;
     } else {
+      userSelectedDate = selectedDate;
       startButton.disabled = false;
     }
-  }
+  },
 };
 
-flatpickr(dateInput, options);
+flatpickr('#datetime-picker', options);
 
-function addLeadingZero(value) {
+let countdownInterval = null;
+
+const startCountdown = () => {
+  countdownInterval = setInterval(() => {
+    const now = new Date();
+    const timeLeft = userSelectedDate - now;
+
+    if (timeLeft <= 0) {
+      clearInterval(countdownInterval);
+      updateTimerDisplay(0, 0, 0, 0);
+      iziToast.success({ title: 'Success', message: 'Countdown finished!' });
+      startButton.disabled = true;
+      datetimePicker.disabled = false;
+    } else {
+      const { days, hours, minutes, seconds } = convertMs(timeLeft);
+      updateTimerDisplay(days, hours, minutes, seconds);
+    }
+  }, 1000);
+
+  startButton.disabled = true;
+  datetimePicker.disabled = true;
+};
+
+startButton.addEventListener('click', startCountdown);
+
+const updateTimerDisplay = (days, hours, minutes, seconds) => {
+  daysEl.textContent = addLeadingZero(days);
+  hoursEl.textContent = addLeadingZero(hours);
+  minutesEl.textContent = addLeadingZero(minutes);
+  secondsEl.textContent = addLeadingZero(seconds);
+};
+
+const addLeadingZero = value => {
   return String(value).padStart(2, '0');
-}
+};
 
 function convertMs(ms) {
   const second = 1000;
@@ -55,38 +84,3 @@ function convertMs(ms) {
 
   return { days, hours, minutes, seconds };
 }
-
-function updateTimerDisplay({ days, hours, minutes, seconds }) {
-  timerFields.days.textContent = addLeadingZero(days);
-  timerFields.hours.textContent = addLeadingZero(hours);
-  timerFields.minutes.textContent = addLeadingZero(minutes);
-  timerFields.seconds.textContent = addLeadingZero(seconds);
-}
-
-function startCountdown() {
-  const targetTime = userSelectedDate.getTime();
-  
-  countdownInterval = setInterval(() => {
-    const currentTime = Date.now();
-    const timeRemaining = targetTime - currentTime;
-
-    if (timeRemaining <= 0) {
-      clearInterval(countdownInterval);
-      updateTimerDisplay({ days: 0, hours: 0, minutes: 0, seconds: 0 });
-      iziToast.success({
-        title: 'Success',
-        message: 'The countdown has finished!',
-      });
-      startButton.disabled = true;
-      dateInput.disabled = false;
-    } else {
-      const { days, hours, minutes, seconds } = convertMs(timeRemaining);
-      updateTimerDisplay({ days, hours, minutes, seconds });
-    }
-  }, 1000);
-
-  startButton.disabled = true;
-  dateInput.disabled = true;
-}
-
-startButton.addEventListener("click", startCountdown);
